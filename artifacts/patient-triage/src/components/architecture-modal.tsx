@@ -11,6 +11,15 @@ const STAGES = [
   'Clinician review & override',
 ];
 
+const REAL_STACK = [
+  ['React Native', 'bedside nurse intake on tablets'],
+  ['Next.js', 'clinician command center web app'],
+  ['NestJS', 'ingestion, scoring, and audit APIs'],
+  ['PostgreSQL', 'durable patient and audit records'],
+  ['WebSockets', 'live queue updates to every screen'],
+  ['BioClinicalBERT + XGBoost', 'text and vitals inference, late-fused'],
+];
+
 export function ArchitectureModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -29,60 +38,80 @@ export function ArchitectureModal({ onClose }: { onClose: () => void }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto clay-card p-6"
+        className="max-h-[92dvh] w-full max-w-4xl overflow-y-auto clay-card p-8 md:p-12"
       >
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <div className="eyebrow text-[hsl(var(--primary))]">System map</div>
-            <h2 className="mt-1 text-2xl font-bold">Explainability architecture</h2>
+            <div className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--primary))]">System map</div>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Explainability architecture</h2>
           </div>
-          <button onClick={onClose} aria-label="Close architecture map" data-testid="button-close-architecture">
+          <button
+            onClick={onClose}
+            aria-label="Close architecture map"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]"
+            data-testid="button-close-architecture"
+          >
             <X size={20} aria-hidden />
           </button>
         </div>
-        <div className="my-8 grid gap-2 sm:grid-cols-5">
+
+        <div className="my-12 grid gap-4 sm:grid-cols-5">
           {STAGES.map((item, index) => (
-            <div className="relative rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 text-center shadow-[var(--clay-shadow-sm)]" key={item}>
-              <div className="mx-auto mb-2 grid h-7 w-7 place-items-center rounded-full bg-[hsl(var(--primary)/.12)] text-xs font-bold text-[hsl(var(--primary))]">
+            <div
+              className="relative rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-5 text-center shadow-[var(--clay-shadow-sm)]"
+              key={item}
+            >
+              <div className="mx-auto mb-4 grid h-10 w-10 place-items-center rounded-full bg-[hsl(var(--primary)/.12)] text-base font-bold text-[hsl(var(--primary))]">
                 {index + 1}
               </div>
-              <div className="text-[11px] font-bold leading-tight">{item}</div>
+              <div className="text-sm font-bold leading-snug">{item}</div>
               {index < 4 && (
-                <ArrowRight aria-hidden className="absolute -right-4 top-5 z-10 hidden text-[hsl(var(--accent))] sm:block" size={16} />
+                <ArrowRight
+                  aria-hidden
+                  className="absolute -right-5 top-8 z-10 hidden text-[hsl(var(--accent))] sm:block"
+                  size={18}
+                />
               )}
             </div>
           ))}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="border-l-2 border-[hsl(var(--primary))] pl-4">
-            <h3 className="text-sm font-bold">This prototype: local and deterministic</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+
+        <div className="grid gap-10 md:grid-cols-2">
+          <div className="border-l-4 border-[hsl(var(--primary))] pl-6">
+            <h3 className="text-lg font-bold">This prototype: local and deterministic</h3>
+            <p className="mt-3 text-base leading-relaxed text-[hsl(var(--muted-foreground))]">
               The demo scores symptom keywords, risk factors, abnormal vitals, age, consciousness, pain,
               missing-data penalties, and waiting-time escalation with a readable local engine. The “text model” and
               “vitals model” panels simulate BioClinicalBERT and XGBoost — no real models or servers run.
             </p>
           </div>
-          <div className="border-l-2 border-[hsl(var(--accent))] pl-4">
-            <h3 className="text-sm font-bold">Human gate</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+          <div className="border-l-4 border-[hsl(var(--accent))] pl-6">
+            <h3 className="text-lg font-bold">Human gate</h3>
+            <p className="mt-3 text-base leading-relaxed text-[hsl(var(--muted-foreground))]">
               Incomplete or contradictory inputs surface a “Needs clinician review” safeguard. An override writes to
               the audit trail, can be undone, and is never hidden. AI never silently outranks a clinician.
             </p>
           </div>
         </div>
-        <div className="mt-6 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 shadow-[var(--clay-inset)]">
-          <div className="eyebrow text-[hsl(var(--primary))]">A real deployment would use</div>
-          <div className="mt-3 grid gap-2 text-xs text-[hsl(var(--muted-foreground))] sm:grid-cols-2">
-            <span><strong className="text-[hsl(var(--foreground))]">React Native</strong> — bedside nurse intake on tablets</span>
-            <span><strong className="text-[hsl(var(--foreground))]">Next.js</strong> — clinician command center web app</span>
-            <span><strong className="text-[hsl(var(--foreground))]">NestJS</strong> — ingestion, scoring, and audit APIs</span>
-            <span><strong className="text-[hsl(var(--foreground))]">PostgreSQL</strong> — durable patient and audit records</span>
-            <span><strong className="text-[hsl(var(--foreground))]">WebSockets</strong> — live queue updates to every screen</span>
-            <span><strong className="text-[hsl(var(--foreground))]">BioClinicalBERT + XGBoost</strong> — text and vitals inference, late-fused</span>
+
+        <div className="mt-12 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-[var(--clay-inset)] md:p-8">
+          <div className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--primary))]">
+            A real deployment would use
+          </div>
+          <div className="mt-5 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+            {REAL_STACK.map(([name, detail]) => (
+              <div key={name} className="flex items-baseline gap-3 border-b border-[hsl(var(--border))] pb-3">
+                <strong className="shrink-0 text-base text-[hsl(var(--foreground))]">{name}</strong>
+                <span className="text-sm text-[hsl(var(--muted-foreground))]">{detail}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="mt-6 flex justify-end">
-          <Button onClick={onClose} testId="button-dismiss-architecture">Close map</Button>
+
+        <div className="mt-10 flex justify-end">
+          <Button onClick={onClose} testId="button-dismiss-architecture">
+            Close map
+          </Button>
         </div>
       </motion.div>
     </div>
