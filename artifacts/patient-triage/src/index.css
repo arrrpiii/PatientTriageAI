@@ -77,9 +77,22 @@
   --sidebar-ring: 186 78% 46%;
   --app-font-sans: 'DM Sans', sans-serif;
   --app-font-mono: 'Space Mono', monospace;
-  --radius: 0.65rem;
+  --radius: 1rem;
   --shadow-sm: 0 1px 2px hsl(211 48% 16% / .05), 0 5px 18px hsl(211 48% 16% / .04);
   --shadow-md: 0 8px 24px hsl(211 48% 16% / .08);
+  /* Claymorphism: puffy outer drop + bright top inset + soft bottom inset */
+  --clay-shadow:
+    0 12px 26px -12px hsl(211 48% 16% / .16),
+    0 2px 6px hsl(211 48% 16% / .05),
+    inset 0 2px 3px hsl(0 0% 100% / .95),
+    inset 0 -4px 8px hsl(211 48% 16% / .07);
+  --clay-shadow-sm:
+    0 6px 14px -8px hsl(211 48% 16% / .14),
+    inset 0 1.5px 2px hsl(0 0% 100% / .9),
+    inset 0 -2.5px 5px hsl(211 48% 16% / .06);
+  --clay-inset:
+    inset 0 2.5px 6px hsl(211 48% 16% / .09),
+    inset 0 -1px 2px hsl(0 0% 100% / .8);
 }
 
 .dark {
@@ -112,6 +125,18 @@
   --sidebar-accent: 211 37% 18%;
   --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-ring: 186 78% 46%;
+  --clay-shadow:
+    0 12px 26px -12px hsl(0 0% 0% / .55),
+    0 2px 6px hsl(0 0% 0% / .25),
+    inset 0 1.5px 2px hsl(201 60% 70% / .14),
+    inset 0 -4px 8px hsl(0 0% 0% / .3);
+  --clay-shadow-sm:
+    0 6px 14px -8px hsl(0 0% 0% / .5),
+    inset 0 1px 1.5px hsl(201 60% 70% / .12),
+    inset 0 -2.5px 5px hsl(0 0% 0% / .28);
+  --clay-inset:
+    inset 0 2.5px 6px hsl(0 0% 0% / .38),
+    inset 0 -1px 2px hsl(201 60% 70% / .08);
 }
 
 * { box-sizing: border-box; }
@@ -130,6 +155,28 @@ button, a, input, select, textarea { outline-color: hsl(var(--ring)); outline-of
 
 .mono { font-family: var(--app-font-mono); letter-spacing: -.02em; }
 .eyebrow { font-family: var(--app-font-mono); font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+
+/* Clay surfaces */
+.clay-card {
+  border: 1px solid hsl(var(--border) / .8);
+  background: hsl(var(--card));
+  border-radius: 1.25rem;
+  box-shadow: var(--clay-shadow);
+}
+.clay-chip {
+  border: 1px solid hsl(var(--border) / .8);
+  background: hsl(var(--card));
+  border-radius: 9999px;
+  box-shadow: var(--clay-shadow-sm);
+}
+.clay-input {
+  border: 1px solid hsl(var(--input));
+  background: hsl(var(--background));
+  border-radius: 0.9rem;
+  box-shadow: var(--clay-inset);
+}
+.clay-input:focus { background: hsl(var(--card)); border-color: hsl(var(--primary)); }
+.clay-raised { box-shadow: var(--clay-shadow-sm); }
 .grid-paper {
   background-image: linear-gradient(hsl(var(--primary) / .045) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / .045) 1px, transparent 1px);
   background-size: 26px 26px;

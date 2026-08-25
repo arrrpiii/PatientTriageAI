@@ -2,64 +2,77 @@
 
 PatientTriage.ai is Team Eclipse's hackathon prototype for an explainable,
 AI-assisted emergency-department triage cockpit. It is a frontend-only
-simulation: all patients are fictional, all scoring runs locally, and a
-clinician remains responsible for the final queue decision.
+simulation: all patients are fictional, all scoring runs locally in a
+deterministic engine, and a clinician remains responsible for the final queue
+decision. No real models, servers, or patient data are involved.
 
 ## Setup
 
-```bash
-cd artifacts/patient-triage
-npm install
-npm run dev
-```
-
-The app is also part of the workspace. From the repository root:
+This package lives in a pnpm workspace and uses pnpm-only `catalog:` versions,
+so always install from the repository root with pnpm (npm will not work):
 
 ```bash
+pnpm install
+pnpm --filter @workspace/patient-triage run dev      # dev server (default port 5173)
+pnpm --filter @workspace/patient-triage run build    # production build
 pnpm --filter @workspace/patient-triage run typecheck
 ```
 
+On Replit, `PORT` and `BASE_PATH` are provided by the environment; locally the
+Vite config falls back to port 5173 and base `/`.
+
 ## Architecture
 
-- `src/App.tsx` contains the demo data model, local scoring engine, shared
-  shell, routes, intake flow, queue, patient drawer, and analytics surfaces.
-- `localStorage` persists seeded-queue changes under
-  `patient-triage-patients`, intake drafts under
-  `patient-triage-intake-draft`, and the light/dark preference under
-  `patient-triage-theme`.
-- The scoring engine is deterministic and intentionally readable. It combines
-  complaint keywords, risk factors, abnormal vitals, age, consciousness,
-  missing-data confidence penalties, and waiting-time context. Incomplete
-  records surface a `Needs clinician review` safeguard.
-- The clinician drawer writes human overrides and reasons to each patient's
-  audit log. Reset restores the original fictional shift.
-- Recharts powers the triage distribution view, while the supporting wait-time
-  and calibration visuals use deliberately lightweight local chart blocks so
-  the demo stays fast and self-contained. Every chart is driven by the same
-  seeded simulation metrics shown in the command center.
+- `src/lib/triage.ts` — the deterministic scoring engine, patient data model,
+  12 seeded scenario records, arrival pool, and derived-analytics helpers.
+  Seed records are scored **by the engine at load time**, so seed data and
+  engine output can never disagree. The engine scores complaint keywords, risk
+  factors, abnormal vitals, age, consciousness, pain score, missing-data
+  penalties, and waiting-time escalation, and flags contradictory records as
+  “Needs clinician review”.
+- `src/lib/store.ts` — a shared localStorage-backed queue store observed by
+  every page (sidebar badge, dashboard, intake, analytics). Owns overrides
+  with undo, simulated arrivals/deterioration, reset, the nurse/clinician
+  role, and a wall-clock tick that advances waiting times and rescores so the
+  queue reorders over a long-running demo.
+- `src/lib/guided.ts` + `src/components/guided-overlay.tsx` — the scripted
+  guided demo: nine steps with presenter captions and pause / resume / skip /
+  restart / exit controls, paced by wall-clock deadlines so background-tab
+  throttling cannot stall it.
+- `src/pages/` — landing, intake (four-stage flow with autosave, inline range
+  validation, demo presets, and the five-stage processing pipeline), the
+  command-center dashboard, and analytics.
+- `src/components/` — the patient detail drawer (honestly labeled simulated
+  BioClinicalBERT / XGBoost / late-fusion panels, override + audit + undo),
+  the architecture modal, and shared primitives.
+- `localStorage` keys: `patient-triage-patients` (queue),
+  `patient-triage-intake-draft` (autosave), `patient-triage-theme`,
+  `patient-triage-role`, `patient-triage-last-tick`.
 
-No backend or external API is required for the prototype. Do not use this
-interface for real clinical decisions.
+Every number on the analytics page is derived live from the queue — overrides,
+arrivals, and waiting time visibly change it.
 
 ## 90-second presentation script
 
-**0:00–0:15 — Set the scene.** “In an emergency department, the first minute
-contains the most important signal, but it is also the noisiest. PatientTriage.ai
-turns that first handoff into a structured, reviewable record.”
+**0:00–0:10 — One click.** On the landing page press **Launch live demo**. The
+guided tour drives everything that follows; you narrate over its captions.
 
-**0:15–0:35 — Show intake.** Open **Nurse intake**, choose **Load demo
-shortcut**, move through the four stages, and point out autosave, missing-data
-warnings, and the review screen. Submit the fictional case.
+**0:10–0:35 — Intake.** The tour opens nurse intake and loads a high-risk
+arrival (chest pain, low SpO₂, cardiac history), shows the review stage
+calling out data quality, then submits through the five-stage pipeline:
+capture, secure ingestion, parallel inference, late fusion, clinician review.
 
-**0:35–1:05 — Show the queue.** Handoff to **Command center**. Open Mara
-Ellison or the newly submitted case. Expand **Why this decision?** to show
-narrative, vitals, and confidence signals. Point out that the score is a
-suggestion, not a diagnosis.
+**0:35–0:55 — The live queue.** The patient enters the command center and
+ranks by acuity and waiting time. Point out the department status, the
+deteriorating flags, and that waiting-time escalation is a real scoring input.
 
-**1:05–1:20 — Show the human gate.** Choose **Review / override**, select a
-different level, enter a reason, and save. The override appears in the audit
-trail: the system records what the clinician changed and why.
+**0:55–1:15 — Explainability and the human gate.** The drawer opens itself:
+separate simulated text-model and vitals-model scores, fused with reasons in
+plain language. The tour then performs a clinician override with a documented
+reason — show the toast, the audit trail, and Undo.
 
-**1:20–1:30 — Close with trust.** Open **Architecture** and finish on
-**Analytics**. “The memorable part is not that a model produces a number. It
-is that every number can be understood, challenged, and owned by a clinician.”
+**1:15–1:30 — Close with trust.** Exit the tour, open **Architecture**, and
+finish on **Analytics**: “Every number here is derived from the queue you just
+watched. Nothing is hard-coded, and nothing outranks the clinician.”
+
+Do not use this interface for real clinical decisions.
