@@ -2,13 +2,11 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import {
   ArrowRight, BrainCircuit, ChevronDown, Command, Database, FileText, Lightbulb, Play,
-  ShieldCheck, Sparkles, Timer,
+  ShieldCheck, Timer,
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { deriveAnalytics, sortPatients } from '@/lib/triage';
-import { usePatients } from '@/lib/store';
 import { guided } from '@/lib/guided';
-import { AnimatedNumber, DemoNotice, LevelBadge, Reveal } from '@/components/primitives';
+import { DemoNotice, Reveal } from '@/components/primitives';
 import heroBanner from '@/assets/hero-banner.jpg';
 
 const PIPELINE = [
@@ -105,13 +103,9 @@ function StageStack() {
 }
 
 export function Landing() {
-  const patients = usePatients();
   const [, setLocation] = useLocation();
-  const analytics = deriveAnalytics(patients);
-  const topQueue = sortPatients(patients).slice(0, 4);
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroDrift = useTransform(heroProgress, [0, 1], [0, -60]);
   const heroFade = useTransform(heroProgress, [0, 0.9], [1, 0.25]);
 
   const launchDemo = () => {
@@ -161,18 +155,18 @@ export function Landing() {
           className="pointer-events-none absolute right-[30%] top-[10%] h-80 w-80 rounded-full bg-[hsl(213_70%_50%/.16)] blur-3xl"
         />
         <div aria-hidden className="grid-paper absolute inset-0 opacity-30" />
-        <div className="relative mx-auto grid min-h-[calc(100dvh-4rem)] max-w-[1500px] items-center gap-12 px-4 py-16 md:px-8 lg:grid-cols-[1.08fr_.92fr]">
+        <div className="relative mx-auto flex min-h-[calc(100dvh-5rem)] max-w-[1500px] flex-col items-center justify-center px-4 py-16 text-center md:px-8">
         <motion.div style={{ opacity: heroFade }} className="reveal">
-          <h1 className="max-w-3xl text-5xl font-bold leading-[.98] tracking-[-.055em] md:text-7xl">
+          <h1 className="mx-auto max-w-4xl text-5xl font-bold leading-[.98] tracking-[-.055em] md:text-7xl">
             The next decision<br />
             <span className="text-[hsl(186_78%_52%)]">should be explainable.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-[hsl(201_35%_80%)] md:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[hsl(201_35%_80%)] md:text-xl">
             PatientTriage.ai helps emergency teams move from first signal to confident clinical review — faster triage
             at the door, multimodal analysis of symptoms and vitals, explainable prioritization, and a human in the
             loop at every step.
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
             <button onClick={launchDemo} data-testid="button-launch-live-demo" className={CTA_BUTTON}>
               <Play size={16} aria-hidden />
               Launch live demo
@@ -184,60 +178,6 @@ export function Landing() {
               Open command center <Command size={16} aria-hidden />
             </Link>
           </div>
-        </motion.div>
-        <motion.div style={{ y: heroDrift }}>
-          <motion.div
-            animate={{ y: [0, -7, 0] }}
-            transition={{ repeat: Infinity, duration: 5.5, ease: 'easeInOut' }}
-            className="relative min-h-[380px] rounded-[1.25rem] border border-[hsl(211_37%_25%)] bg-[hsl(211_42%_16%)] p-5 text-[hsl(201_35%_92%)] shadow-[0_18px_40px_-16px_hsl(211_48%_5%/.8),inset_0_1.5px_2px_hsl(201_60%_70%/.12)]"
-          >
-            <div className="absolute right-5 top-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--primary))]">
-              live simulation
-            </div>
-            <div className="eyebrow text-[hsl(201_21%_69%)]">Command center / queue snapshot</div>
-            <div className="mt-5 grid grid-cols-3 border-y border-[hsl(211_37%_25%)] py-4">
-              <div>
-                <span className="block text-3xl font-bold"><AnimatedNumber value={analytics.total} /></span>
-                <span className="text-[10px] uppercase tracking-wider text-[hsl(201_21%_69%)]">in queue</span>
-              </div>
-              <div>
-                <span className="block text-3xl font-bold text-[hsl(3_69%_60%)]">
-                  <AnimatedNumber value={analytics.needsReview.length} pad={2} />
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-[hsl(201_21%_69%)]">review now</span>
-              </div>
-              <div>
-                <span className="block text-3xl font-bold text-[hsl(27_92%_60%)]">
-                  <AnimatedNumber value={analytics.medianWait} />m
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-[hsl(201_21%_69%)]">median wait</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              {topQueue.map((patient, index) => (
-                <div
-                  key={patient.id}
-                  className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-l-4 border-[hsl(211_37%_25%)] py-3 pl-3 pr-1 last:border-b-0 ${index === 0 ? 'border-l-[hsl(3_69%_57%)]' : 'border-l-transparent'}`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="truncate text-sm font-bold text-white">{patient.name}</span>
-                      {patient.age !== null && <span className="shrink-0 text-[11px] text-[hsl(201_21%_69%)]">{patient.age}y</span>}
-                    </div>
-                    <span className="mt-0.5 block truncate text-xs text-[hsl(201_21%_69%)]">{patient.complaint}</span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="mono text-xs text-[hsl(201_21%_69%)]">{patient.waitMinutes}m</span>
-                    <LevelBadge level={patient.clinicianLevel ?? patient.triageLevel} compact />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-[11px] text-[hsl(201_21%_69%)]">
-              <Sparkles size={14} aria-hidden className="text-[hsl(27_92%_60%)]" />
-              Scored locally · no patient data leaves this demo
-            </div>
-          </motion.div>
         </motion.div>
         </div>
         <motion.button
