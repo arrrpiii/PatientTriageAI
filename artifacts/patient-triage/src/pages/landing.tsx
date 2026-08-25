@@ -10,17 +10,17 @@ import { DemoNotice, Reveal } from '@/components/primitives';
 import heroBanner from '@/assets/hero-banner.jpg';
 
 const PIPELINE = [
-  { n: '01', title: 'Capture', detail: 'A one-minute nurse intake, built for the triage desk. Large touch targets, autosave, and missing-data warnings keep the first minute calm.', icon: FileText, tint: '186 78% 31%' },
-  { n: '02', title: 'Ingest', detail: 'Secure local persistence normalizes the narrative, vitals, and gaps into one structured record — nothing leaves the browser in this demo.', icon: Database, tint: '213 53% 44%' },
-  { n: '03', title: 'Infer', detail: 'Two simulated models score in parallel: a BioClinicalBERT-style read of the narrative, and an XGBoost-style pass over the vitals.', icon: BrainCircuit, tint: '27 92% 47%' },
-  { n: '04', title: 'Fuse & explain', detail: 'Late fusion combines both scores with missing-data penalties and waiting-time escalation — and attaches its reasons in plain language.', icon: Lightbulb, tint: '156 42% 38%' },
-  { n: '05', title: 'Decide', detail: 'The clinician reviews, overrides with a documented reason, and owns the final queue position. Every decision lands in an audit trail.', icon: ShieldCheck, tint: '3 69% 50%' },
+  { n: '01', title: 'Capture', detail: 'A one-minute nurse intake, built for the triage desk. Large touch targets, autosave, and missing-data warnings keep the first minute calm.', icon: FileText, tint: '215 75% 42%' },
+  { n: '02', title: 'Ingest', detail: 'Secure local persistence normalizes the narrative, vitals, and gaps into one structured record — nothing leaves the browser in this demo.', icon: Database, tint: '213 60% 50%' },
+  { n: '03', title: 'Infer', detail: 'Two simulated models score in parallel: a BioClinicalBERT-style read of the narrative, and an XGBoost-style pass over the vitals.', icon: BrainCircuit, tint: '210 80% 52%' },
+  { n: '04', title: 'Fuse & explain', detail: 'Late fusion combines both scores with missing-data penalties and waiting-time escalation — and attaches its reasons in plain language.', icon: Lightbulb, tint: '208 50% 46%' },
+  { n: '05', title: 'Decide', detail: 'The clinician reviews, overrides with a documented reason, and owns the final queue position. Every decision lands in an audit trail.', icon: ShieldCheck, tint: '222 65% 38%' },
 ];
 
 const CTA_BUTTON =
   'inline-flex min-h-11 items-center gap-2 rounded-full bg-[hsl(var(--primary))] px-6 text-sm font-bold text-white shadow-[0_8px_20px_-8px_hsl(var(--primary)/.7),inset_0_1.5px_2px_hsl(0_0%_100%/.35),inset_0_-2.5px_5px_hsl(0_0%_0%/.18)] transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[hsl(var(--primary))]';
 const CTA_CHIP =
-  'inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[hsl(186_78%_52%)]';
+  'inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[hsl(213_85%_62%)]';
 
 function StageCard({
   stage,
@@ -140,13 +140,13 @@ export function Landing() {
           aria-hidden
           animate={{ x: [0, 60, 0], y: [0, 40, 0], scale: [1, 1.15, 1] }}
           transition={{ repeat: Infinity, duration: 16, ease: 'easeInOut' }}
-          className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-[hsl(186_78%_42%/.22)] blur-3xl"
+          className="pointer-events-none absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-[hsl(213_85%_55%/.25)] blur-3xl"
         />
         <motion.div
           aria-hidden
           animate={{ x: [0, -70, 0], y: [0, -30, 0], scale: [1, 1.1, 1] }}
           transition={{ repeat: Infinity, duration: 19, ease: 'easeInOut', delay: 2 }}
-          className="pointer-events-none absolute -bottom-48 right-[8%] h-[30rem] w-[30rem] rounded-full bg-[hsl(27_92%_57%/.14)] blur-3xl"
+          className="pointer-events-none absolute -bottom-48 right-[8%] h-[30rem] w-[30rem] rounded-full bg-[hsl(208_90%_60%/.16)] blur-3xl"
         />
         <motion.div
           aria-hidden
@@ -159,7 +159,7 @@ export function Landing() {
         <motion.div style={{ opacity: heroFade }} className="reveal">
           <h1 className="mx-auto max-w-4xl text-5xl font-bold leading-[.98] tracking-[-.055em] md:text-7xl">
             The next decision<br />
-            <span className="text-[hsl(186_78%_52%)]">should be explainable.</span>
+            <span className="text-[hsl(213_90%_68%)]">should be explainable.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[hsl(201_35%_80%)] md:text-xl">
             PatientTriage.ai helps emergency teams move from first signal to confident clinical review — faster triage
@@ -186,7 +186,7 @@ export function Landing() {
           transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
           aria-label="Scroll down to the five stages"
           data-testid="button-scroll-down"
-          className="absolute bottom-7 left-1/2 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-white/20 bg-white/5 text-white backdrop-blur transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(186_78%_52%)]"
+          className="absolute bottom-7 left-1/2 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-white/20 bg-white/5 text-white backdrop-blur transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(213_85%_62%)]"
         >
           <ChevronDown size={20} aria-hidden />
         </motion.button>

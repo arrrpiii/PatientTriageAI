@@ -190,7 +190,7 @@ export function Analytics() {
         kicker="Calibration"
         title="AI suggestions vs clinician decisions"
         points={[
-          'Teal is the model, amber is the human.',
+          'Deep blue is the model, light blue is the human.',
           'Where the bars differ, a documented override changed the queue.',
           `Alignment this shift: ${analytics.alignment}%.`,
         ]}

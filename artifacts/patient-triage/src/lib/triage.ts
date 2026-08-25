@@ -43,11 +43,11 @@ export type Patient = {
 };
 
 export const LEVELS: { value: TriageLevel; label: string; color: string; short: string }[] = [
-  { value: 'Level 1', label: 'Immediate', color: '#d9554c', short: 'L1' },
-  { value: 'Level 2', label: 'Emergent', color: '#df8a31', short: 'L2' },
-  { value: 'Level 3', label: 'Urgent', color: '#c4a238', short: 'L3' },
-  { value: 'Level 4', label: 'Less Urgent', color: '#39968a', short: 'L4' },
-  { value: 'Level 5', label: 'Non-Urgent', color: '#5c7c99', short: 'L5' },
+  { value: 'Level 1', label: 'Immediate', color: '#1e51d4', short: 'L1' },
+  { value: 'Level 2', label: 'Emergent', color: '#2f6ade', short: 'L2' },
+  { value: 'Level 3', label: 'Urgent', color: '#4a82db', short: 'L3' },
+  { value: 'Level 4', label: 'Less Urgent', color: '#5f8bd0', short: 'L4' },
+  { value: 'Level 5', label: 'Non-Urgent', color: '#7f9cc4', short: 'L5' },
 ];
 
 export const levelMeta = (level: TriageLevel) => LEVELS.find((item) => item.value === level) ?? LEVELS[2];
