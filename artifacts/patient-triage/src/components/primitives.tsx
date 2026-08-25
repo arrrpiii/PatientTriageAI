@@ -1,9 +1,48 @@
-import { type ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { Activity, Info } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { animate, motion } from 'framer-motion';
+import { Info } from 'lucide-react';
 import { type TriageLevel, levelMeta } from '@/lib/triage';
 
 export const springy = { type: 'spring', stiffness: 420, damping: 24 } as const;
+
+// Count-up number: tweens toward `value` whenever it changes, preserving zero-padding.
+export function AnimatedNumber({ value, pad = 0, className }: { value: number; pad?: number; className?: string }) {
+  const [display, setDisplay] = useState(value);
+  const previous = useRef(value);
+  useEffect(() => {
+    const controls = animate(previous.current, value, {
+      duration: 0.8,
+      ease: 'easeOut',
+      onUpdate: (latest) => setDisplay(Math.round(latest)),
+    });
+    previous.current = value;
+    return () => controls.stop();
+  }, [value]);
+  return <span className={className}>{String(display).padStart(pad, '0')}</span>;
+}
+
+// Scroll-reveal wrapper: fades and rises the first time it enters the viewport.
+export function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-80px' }}
+      transition={{ duration: 0.55, ease: 'easeOut', delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export function Tip({ children, text }: { children: ReactNode; text: string }) {
   return (
@@ -84,12 +123,10 @@ export function Button({
 }
 
 export function SectionHeading({
-  eyebrow,
   title,
   detail,
   action,
 }: {
-  eyebrow: string;
   title: string;
   detail?: string;
   action?: ReactNode;
@@ -97,7 +134,6 @@ export function SectionHeading({
   return (
     <div className="mb-6 flex items-end justify-between gap-4">
       <div>
-        <div className="eyebrow mb-2 text-[hsl(var(--primary))]">{eyebrow}</div>
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
         {detail && <p className="mt-1 max-w-2xl text-sm text-[hsl(var(--muted-foreground))]">{detail}</p>}
       </div>
@@ -106,47 +142,61 @@ export function SectionHeading({
   );
 }
 
-export function Metric({
+// Large de-carded statistic: big count-up number directly on the page background.
+export function BigStat({
   label,
   value,
   delta,
   tone = 'normal',
-  icon: Icon,
   testId,
+  delay = 0,
 }: {
   label: string;
   value: string;
   delta?: string;
   tone?: 'normal' | 'danger' | 'accent';
-  icon: typeof Activity;
   testId?: string;
+  delay?: number;
 }) {
+  const match = /^(\d+)(.*)$/.exec(value);
+  const toneClass =
+    tone === 'danger'
+      ? 'text-[hsl(var(--destructive))]'
+      : tone === 'accent'
+        ? 'text-[hsl(var(--accent))]'
+        : 'text-[hsl(var(--foreground))]';
   return (
     <motion.div
-      whileHover={{ y: -3, rotate: -0.4 }}
-      transition={springy}
-      className="clay-card p-4"
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.5, ease: 'easeOut', delay }}
+      whileHover={{ y: -4 }}
       data-testid={testId}
     >
-      <div className="flex items-center justify-between">
-        <span className="eyebrow text-[hsl(var(--muted-foreground))]">{label}</span>
-        <span
-          aria-hidden
-          className={`grid h-8 w-8 place-items-center rounded-full ${
-            tone === 'danger'
-              ? 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'
-              : tone === 'accent'
-                ? 'bg-[hsl(var(--accent)/.12)] text-[hsl(var(--accent))]'
-                : 'bg-[hsl(var(--primary)/.1)] text-[hsl(var(--primary))]'
-          }`}
-        >
-          <Icon size={15} />
-        </span>
+      <div className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{label}</div>
+      <div className={`mono mt-2 text-5xl font-bold tracking-tight md:text-6xl ${toneClass}`}>
+        {match ? (
+          <>
+            <AnimatedNumber
+              value={Number(match[1])}
+              pad={match[1].length > 1 && match[1].startsWith('0') ? match[1].length : 0}
+            />
+            {match[2]}
+          </>
+        ) : (
+          value
+        )}
       </div>
-      <div className="mt-3 flex items-end justify-between">
-        <strong className={`mono text-2xl ${tone === 'danger' ? 'text-[hsl(var(--destructive))]' : ''}`}>{value}</strong>
-        {delta && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{delta}</span>}
-      </div>
+      {delta && <div className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{delta}</div>}
+      <motion.span
+        aria-hidden
+        initial={{ scaleX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: delay + 0.25 }}
+        className={`mt-3 block h-1 w-12 origin-left rounded-full ${tone === 'danger' ? 'bg-[hsl(var(--destructive))]' : tone === 'accent' ? 'bg-[hsl(var(--accent))]' : 'bg-[hsl(var(--primary))]'}`}
+      />
     </motion.div>
   );
 }

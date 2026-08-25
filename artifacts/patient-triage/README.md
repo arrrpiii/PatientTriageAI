@@ -1,6 +1,6 @@
 # PatientTriage.ai
 
-PatientTriage.ai is Team Eclipse's hackathon prototype for an explainable,
+PatientTriage.ai is Team BitCrush's hackathon prototype for an explainable,
 AI-assisted emergency-department triage cockpit. It is a frontend-only
 simulation: all patients are fictional, all scoring runs locally in a
 deterministic engine, and a clinician remains responsible for the final queue

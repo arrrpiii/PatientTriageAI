@@ -66,6 +66,10 @@ export const patientStore = {
     setPatients([patient, ...snapshot.patients]);
   },
 
+  addPatients(patients: Patient[]) {
+    setPatients([...patients, ...snapshot.patients]);
+  },
+
   applyOverride(id: string, level: TriageLevel, reason: string) {
     setPatients(
       snapshot.patients.map((patient) =>

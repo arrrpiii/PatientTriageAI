@@ -1,6 +1,6 @@
 # PatientTriage.ai
 
-Team Eclipse's hackathon prototype: an explainable AI-assisted emergency-department
+Team BitCrush's hackathon prototype: an explainable AI-assisted emergency-department
 triage cockpit where nurses capture intake in under a minute, a deterministic local
 engine produces transparent acuity suggestions, and clinicians review, override, and
 own every decision. Frontend-only simulation — fictional data, no real models.

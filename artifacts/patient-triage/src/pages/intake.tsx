@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  AlertTriangle, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, FileClock,
-  ShieldCheck, Zap,
+  AlertTriangle, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, Download,
+  FileSpreadsheet, ShieldCheck, Upload, Zap,
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import {
   INTAKE_PRESETS, type Patient, makePatient, queuePosition,
 } from '@/lib/triage';
 import { patientStore, setFocusPatient, usePatients } from '@/lib/store';
+import { type BulkImportResult, CSV_TEMPLATE, MAX_BULK_ROWS, importPatientsCsv } from '@/lib/csv';
+import { useToast } from '@/hooks/use-toast';
 import { guided, useGuided } from '@/lib/guided';
-import { Button, DemoNotice, LevelBadge, SectionHeading, Tip } from '@/components/primitives';
+import { Button, LevelBadge, Reveal, SectionHeading, Tip } from '@/components/primitives';
 
 const EMPTY_FORM = {
   name: '', id: '', age: '', sex: '', arrivalMethod: 'Walk-in', heartRate: '', bloodPressure: '',
@@ -59,6 +61,35 @@ export function Intake() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const guidedState = useGuided();
+  const { toast } = useToast();
+  const [bulkResult, setBulkResult] = useState<BulkImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvFile = async (file: File) => {
+    const text = await file.text();
+    const existingIds = new Set(patientStore.getSnapshot().patients.map((patient) => patient.id));
+    const result = importPatientsCsv(text, existingIds);
+    if (result.patients.length) {
+      patientStore.addPatients(result.patients);
+      toast({
+        title: `${result.patients.length} patient${result.patients.length === 1 ? '' : 's'} added to the queue`,
+        description: 'Each row was scored by the same engine as the manual form.',
+      });
+    } else {
+      toast({ title: 'Nothing imported', description: result.skipped[0]?.reason ?? 'No valid rows found.' });
+    }
+    setBulkResult(result);
+  };
+
+  const downloadTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'patient-triage-bulk-template.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const draft = localStorage.getItem(DRAFT_KEY);
@@ -158,15 +189,27 @@ export function Intake() {
   useEffect(() => {
     if (!guidedState.active) return;
     const stepId = guided.currentStep()?.id;
+    const scrollToForm = () =>
+      setTimeout(() => document.getElementById('intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
     if (stepId === 'intake-populate') {
       setSubmitted(null);
       setProcessing(false);
       setForm({ ...EMPTY_FORM, ...INTAKE_PRESETS.emergency, id: '' });
       setStep(1);
+      scrollToForm();
     }
-    if (stepId === 'intake-review') setStep(3);
+    if (stepId === 'intake-review') {
+      setStep(3);
+      scrollToForm();
+    }
     if (stepId === 'intake-submit') submitRef.current();
   }, [guidedState.active, guidedState.stepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The processing and success screens replace the whole page; without this the
+  // window can stay scrolled past their short content.
+  useEffect(() => {
+    if (processing || submitted) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [processing, submitted]);
 
   const resetForm = () => {
     setSubmitted(null);
@@ -181,11 +224,16 @@ export function Intake() {
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="border border-[hsl(var(--primary)/.3)] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-md)] md:p-10"
+          className="clay-card border-[hsl(var(--primary)/.3)] p-6 md:p-10"
         >
-          <div className="mb-6 flex h-14 w-14 items-center justify-center bg-[hsl(var(--primary)/.12)] text-[hsl(var(--primary))]">
-            <Check size={28} aria-hidden />
-          </div>
+          <motion.div
+            initial={{ scale: 0.4, rotate: -12 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 16 }}
+            className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--primary)/.12)] text-[hsl(var(--primary))] shadow-[var(--clay-shadow-sm)]"
+          >
+            <Check size={30} aria-hidden />
+          </motion.div>
           <div className="eyebrow mb-3 text-[hsl(var(--primary))]">Intake accepted · {submitted.id}</div>
           <h1 className="text-3xl font-bold tracking-tight">Added to the review queue.</h1>
           <p className="mt-3 text-[hsl(var(--muted-foreground))]">
@@ -309,12 +357,21 @@ export function Intake() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <DemoNotice />
-      <div className="mt-8 grid gap-8 lg:grid-cols-[.72fr_1.28fr]">
+    <div>
+      <Reveal className="mx-auto max-w-5xl py-24 text-center md:py-32">
+        <h2 className="text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+          One minute.<br />
+          <span className="text-[hsl(var(--primary))]">Every signal. No black boxes.</span>
+        </h2>
+        <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[hsl(var(--muted-foreground))] md:text-xl">
+          The form below feeds the same deterministic engine you see in the command center — complaint keywords,
+          vitals, pain, age, consciousness, and what is still missing.
+        </p>
+      </Reveal>
+
+      <div id="intake-form" className="mx-auto max-w-3xl scroll-mt-28">
         <div>
           <SectionHeading
-            eyebrow="Nurse intake / under one minute"
             title="Capture the first signal."
             detail="A focused intake draft is saved locally as you move. Required fields are called out before review."
           />
@@ -502,35 +559,92 @@ export function Intake() {
             </div>
           </div>
         </div>
-        <div className="hidden lg:block">
-          <div className="sticky top-24 clay-card p-6">
-            <div className="eyebrow text-[hsl(var(--primary))]">At the desk</div>
-            <h3 className="mt-2 text-lg font-bold">A calm capture surface for a high-stakes minute.</h3>
-            <div className="mt-7 space-y-4">
-              {[
-                'Name and arrival establish identity.',
-                'Vitals stay discrete and scannable.',
-                'Narrative gives the model a signal — not a conclusion.',
-                'Review makes missing data visible before handoff.',
-              ].map((text, index) => (
-                <div className="flex gap-3 text-sm" key={text}>
-                  <span className="mono text-[hsl(var(--primary))]">0{index + 1}</span>
-                  <span className="text-[hsl(var(--muted-foreground))]">{text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 border-t border-[hsl(var(--border))] pt-5">
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <FileClock size={15} aria-hidden className="text-[hsl(var(--accent))]" />
-                Autosave active
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-                The draft stays in this browser only. This prototype does not transmit patient data.
+      </div>
+
+
+      <section className="mx-auto max-w-5xl py-10">
+        <Reveal>
+          <div className="grid items-center gap-10 lg:grid-cols-[1fr_.9fr] lg:gap-16">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--primary))]">Bulk intake</div>
+              <h2 className="mt-2 text-3xl font-bold leading-tight tracking-tight md:text-5xl">
+                A busy night?<br />Upload the whole waiting room.
+              </h2>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-[hsl(var(--muted-foreground))]">
+                Drop a CSV and every row is validated, scored, and ranked into the live queue — up to {MAX_BULK_ROWS} patients
+                at once. Only <span className="mono text-sm">name</span> and <span className="mono text-sm">complaint</span> are required.
               </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button onClick={() => fileInputRef.current?.click()} testId="button-upload-csv">
+                  <Upload size={16} aria-hidden />
+                  Upload CSV
+                </Button>
+                <Button variant="secondary" onClick={downloadTemplate} testId="button-download-template">
+                  <Download size={16} aria-hidden />
+                  Download template
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  aria-label="Upload patients CSV"
+                  data-testid="input-bulk-csv"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) handleCsvFile(file);
+                    event.target.value = '';
+                  }}
+                />
+              </div>
+            </div>
+            <div className="clay-card p-6 md:p-8">
+              {bulkResult ? (
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-12 w-12 place-items-center rounded-full bg-[hsl(var(--primary)/.12)] text-[hsl(var(--primary))]">
+                      <Check size={22} aria-hidden />
+                    </span>
+                    <div>
+                      <div className="text-2xl font-bold" data-testid="text-bulk-added">
+                        {bulkResult.patients.length} added to the queue
+                      </div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                        {bulkResult.skipped.length ? `${bulkResult.skipped.length} row${bulkResult.skipped.length === 1 ? '' : 's'} skipped` : 'Every row imported cleanly'}
+                        {bulkResult.truncated && ` · capped at ${MAX_BULK_ROWS} rows`}
+                      </div>
+                    </div>
+                  </div>
+                  {bulkResult.skipped.length > 0 && (
+                    <ul className="mt-5 max-h-40 space-y-1.5 overflow-y-auto border-t border-[hsl(var(--border))] pt-4 text-xs text-[hsl(var(--muted-foreground))]">
+                      {bulkResult.skipped.map((item) => (
+                        <li key={`${item.row}-${item.reason}`}>Row {item.row}: {item.reason}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {bulkResult.patients.length > 0 && (
+                    <Button className="mt-6 w-full" onClick={() => setLocation('/dashboard')} testId="button-bulk-open-dashboard">
+                      Open command center <ArrowRight size={16} aria-hidden />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center">
+                  <FileSpreadsheet aria-hidden size={40} className="mx-auto text-[hsl(var(--primary))]" />
+                  <p className="mt-4 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
+                    Recognized columns: name, id, age, sex, arrival, heart rate, blood pressure, respiratory rate,
+                    temperature, SpO₂, consciousness, complaint, notes, pain, risk factors.
+                  </p>
+                  <p className="mt-3 text-xs text-[hsl(var(--muted-foreground))]">
+                    Separate multiple risk factors with a semicolon. Duplicate IDs get regenerated automatically.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
+        </Reveal>
+      </section>
+
     </div>
   );
 }

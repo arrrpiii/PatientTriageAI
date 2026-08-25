@@ -1,22 +1,60 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Activity, AlertCircle, ChevronRight, Filter, ListFilter, Network, Play, Plus, RotateCcw,
-  Search, ShieldCheck, Timer, TrendingDown, Trash2, UsersRound, X,
+  ChevronDown, ChevronRight, ListFilter, Network, Play, Plus, RotateCcw,
+  Search, ShieldCheck, SlidersHorizontal, TrendingDown, Trash2, UsersRound, X,
 } from 'lucide-react';
 import {
-  type Patient, type TriageLevel, LEVELS, deriveAnalytics, effectiveLevel, nowLabel,
+  type Patient, type TriageLevel, LEVELS, deriveAnalytics, effectiveLevel,
   queuePosition, sortPatients,
 } from '@/lib/triage';
 import { patientStore, takeFocusPatient, usePatients, useRole } from '@/lib/store';
 import { guided, useGuided } from '@/lib/guided';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Button, DemoNotice, LevelBadge, Metric, SectionHeading } from '@/components/primitives';
+import { BigStat, Button, LevelBadge, SectionHeading } from '@/components/primitives';
 import { DetailDrawer } from '@/components/detail-drawer';
 import { ArchitectureModal } from '@/components/architecture-modal';
 
 const CAPACITY = 16;
+
+function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-16 shrink-0 text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+  testId,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  testId?: string;
+}) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.92 }}
+      whileHover={{ y: -1.5 }}
+      onClick={onClick}
+      aria-pressed={active}
+      data-testid={testId}
+      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+        active
+          ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white shadow-[0_4px_12px_-4px_hsl(var(--primary)/.7)]'
+          : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary)/.5)] hover:text-[hsl(var(--foreground))]'
+      }`}
+    >
+      {children}
+    </motion.button>
+  );
+}
 
 type WaitFilter = 'any' | '30' | '60' | '120';
 type ReviewFilter = 'All' | 'Pending review' | 'Needs clinician review' | 'Clinician override';
@@ -35,16 +73,12 @@ export function Dashboard() {
   const [sort, setSort] = useState<'acuity' | 'wait'>('acuity');
   const [showArchitecture, setShowArchitecture] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [clock, setClock] = useState(nowLabel());
 
   useEffect(() => {
-    const timer = setInterval(() => setClock(nowLabel()), 1000);
     const skeleton = setTimeout(() => setLoading(false), 350);
-    return () => {
-      clearInterval(timer);
-      clearTimeout(skeleton);
-    };
+    return () => clearTimeout(skeleton);
   }, []);
 
   // Waiting-time escalation: advance waits by real elapsed minutes and rescore.
@@ -157,23 +191,21 @@ export function Dashboard() {
     toast({ title: 'Demo data reset', description: 'The queue returned to the original seeded shift.' });
   };
 
-  const selectClass = 'h-10 clay-input px-2 text-xs font-bold';
+  const activeFilterCount =
+    (filter !== 'All' ? 1 : 0) + (arrivalFilter !== 'All' ? 1 : 0) + (reviewFilter !== 'All' ? 1 : 0) + (waitFilter !== 'any' ? 1 : 0);
+  const clearFilters = () => {
+    setFilter('All');
+    setArrivalFilter('All');
+    setReviewFilter('All');
+    setWaitFilter('any');
+  };
 
   return (
-    <div className="space-y-6">
-      <DemoNotice />
+    <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeading
-          eyebrow="Clinician workspace / live simulation"
           title="Command center"
           detail="Acuity is a suggestion. The queue is accountable."
-          action={
-            <div className="hidden items-center gap-2 clay-chip px-4 py-2 text-xs sm:flex">
-              <span aria-hidden className="h-2 w-2 rounded-full bg-[hsl(var(--primary))] pulse-dot" />
-              <span className="mono" data-testid="text-dashboard-clock">{clock}</span>
-              <span className="text-[hsl(var(--muted-foreground))]">local time</span>
-            </div>
-          }
         />
         <div className="flex flex-wrap gap-2">
           <div className="flex rounded-full bg-[hsl(var(--secondary))] p-1 shadow-[var(--clay-inset)]" role="group" aria-label="Role switch">
@@ -204,74 +236,143 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Patients waiting" value={`${patients.length}`} delta="live queue" icon={UsersRound} testId="metric-waiting" />
-        <Metric
+      <div className="grid gap-10 border-y border-[hsl(var(--border))] py-10 sm:grid-cols-2 lg:grid-cols-4">
+        <BigStat label="Patients waiting" value={`${patients.length}`} delta="live queue" testId="metric-waiting" />
+        <BigStat
           label="Critical / needs review"
           value={`${analytics.needsReview.length}`}
           delta="prioritize now"
           tone="danger"
-          icon={AlertCircle}
           testId="metric-review"
+          delay={0.08}
         />
-        <Metric label="Median wait" value={`${analytics.medianWait}m`} delta="across current queue" tone="accent" icon={Timer} testId="metric-median-wait" />
-        <Metric
+        <BigStat label="Median wait" value={`${analytics.medianWait}m`} delta="across current queue" tone="accent" testId="metric-median-wait" delay={0.16} />
+        <BigStat
           label="Department status"
           value={departmentStatus}
           delta={`${patients.length}/${CAPACITY} capacity · ${capacityPct}%`}
           tone={departmentStatus === 'Surge' ? 'danger' : departmentStatus === 'Busy' ? 'accent' : 'normal'}
-          icon={Activity}
           testId="metric-capacity"
+          delay={0.24}
         />
       </div>
 
-      <div className="flex flex-col gap-3 border-y border-[hsl(var(--border))] py-3 xl:flex-row xl:items-center">
-        <div className="relative flex-1">
-          <Search size={16} aria-hidden className="absolute left-3 top-3 text-[hsl(var(--muted-foreground))]" />
-          <input
-            data-testid="input-search-patients"
-            aria-label="Search patients"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search name, ID, or complaint"
-            className="h-10 w-full clay-input pl-9 pr-3 text-sm"
-          />
+      <div className="space-y-4 border-y border-[hsl(var(--border))] py-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="relative flex-1">
+            <Search size={16} aria-hidden className="absolute left-3.5 top-3 text-[hsl(var(--muted-foreground))]" />
+            <input
+              data-testid="input-search-patients"
+              aria-label="Search patients"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name, ID, or complaint"
+              className="h-11 w-full clay-input rounded-full pl-10 pr-4 text-sm"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full bg-[hsl(var(--secondary))] p-1 shadow-[var(--clay-inset)]" role="group" aria-label="Sort queue">
+              {([['acuity', 'By acuity'], ['wait', 'By wait']] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setSort(value)}
+                  aria-pressed={sort === value}
+                  data-testid={`button-sort-${value}`}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${sort === value ? 'bg-[hsl(var(--primary))] text-white shadow-[0_4px_10px_-4px_hsl(var(--primary)/.7),inset_0_1.5px_2px_hsl(0_0%_100%/.3)]' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              testId="button-toggle-filters"
+              ariaPressed={filtersOpen}
+            >
+              <SlidersHorizontal size={15} aria-hidden />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[hsl(var(--primary))] px-1.5 text-[10px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+              <motion.span aria-hidden animate={{ rotate: filtersOpen ? 180 : 0 }} transition={{ duration: 0.25 }}>
+                <ChevronDown size={15} />
+              </motion.span>
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" onClick={clearFilters} testId="button-clear-filters-bar">
+                <X size={14} aria-hidden />
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-            <Filter size={15} aria-hidden />
-            Filter
-          </span>
-          <select data-testid="select-acuity-filter" aria-label="Filter by acuity" value={filter} onChange={(event) => setFilter(event.target.value as 'All' | TriageLevel)} className={selectClass}>
-            <option>All</option>
-            {LEVELS.map((item) => (
-              <option key={item.value}>{item.value}</option>
-            ))}
-          </select>
-          <select data-testid="select-arrival-filter" aria-label="Filter by arrival method" value={arrivalFilter} onChange={(event) => setArrivalFilter(event.target.value)} className={selectClass}>
-            <option>All</option>
-            <option>Walk-in</option>
-            <option>EMS</option>
-            <option>Family</option>
-            <option>Transfer</option>
-          </select>
-          <select data-testid="select-review-filter" aria-label="Filter by review status" value={reviewFilter} onChange={(event) => setReviewFilter(event.target.value as ReviewFilter)} className={selectClass}>
-            <option value="All">All statuses</option>
-            <option>Pending review</option>
-            <option>Needs clinician review</option>
-            <option>Clinician override</option>
-          </select>
-          <select data-testid="select-wait-filter" aria-label="Filter by waiting time" value={waitFilter} onChange={(event) => setWaitFilter(event.target.value as WaitFilter)} className={selectClass}>
-            <option value="any">Any wait</option>
-            <option value="30">Waiting 30m+</option>
-            <option value="60">Waiting 60m+</option>
-            <option value="120">Waiting 120m+</option>
-          </select>
-          <select data-testid="select-sort-queue" aria-label="Sort queue" value={sort} onChange={(event) => setSort(event.target.value as 'acuity' | 'wait')} className={selectClass}>
-            <option value="acuity">Sort: acuity</option>
-            <option value="wait">Sort: wait time</option>
-          </select>
-        </div>
+        <AnimatePresence initial={false}>
+          {filtersOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-4 pt-1">
+                <FilterRow label="Acuity">
+                  <FilterChip active={filter === 'All'} onClick={() => setFilter('All')} testId="chip-acuity-all">
+                    All
+                  </FilterChip>
+                  {LEVELS.map((item, index) => {
+                    const active = filter === item.value;
+                    return (
+                      <motion.button
+                        key={item.value}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04 }}
+                        whileTap={{ scale: 0.92 }}
+                              onClick={() => setFilter(active ? 'All' : item.value)}
+                        aria-pressed={active}
+                        data-testid={`chip-acuity-${item.short}`}
+                        className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors"
+                        style={
+                          active
+                            ? { backgroundColor: item.color, borderColor: item.color, color: 'white', boxShadow: `0 4px 12px -4px ${item.color}AA` }
+                            : { backgroundColor: `${item.color}10`, borderColor: `${item.color}55`, color: item.color }
+                        }
+                      >
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: active ? 'white' : item.color }} />
+                        {item.short} · {item.label}
+                      </motion.button>
+                    );
+                  })}
+                </FilterRow>
+                <FilterRow label="Arrival">
+                  {(['All', 'Walk-in', 'EMS', 'Family', 'Transfer'] as const).map((option) => (
+                    <FilterChip key={option} active={arrivalFilter === option} onClick={() => setArrivalFilter(option)} testId={`chip-arrival-${option.toLowerCase()}`}>
+                      {option}
+                    </FilterChip>
+                  ))}
+                </FilterRow>
+                <FilterRow label="Status">
+                  {(['All', 'Pending review', 'Needs clinician review', 'Clinician override'] as ReviewFilter[]).map((option) => (
+                    <FilterChip key={option} active={reviewFilter === option} onClick={() => setReviewFilter(option)} testId={`chip-status-${option.split(' ')[0].toLowerCase()}`}>
+                      {option === 'All' ? 'All statuses' : option}
+                    </FilterChip>
+                  ))}
+                </FilterRow>
+                <FilterRow label="Waiting">
+                  {([['any', 'Any wait'], ['30', '30m+'], ['60', '60m+'], ['120', '120m+']] as [WaitFilter, string][]).map(([value, label]) => (
+                    <FilterChip key={value} active={waitFilter === value} onClick={() => setWaitFilter(value)} testId={`chip-wait-${value}`}>
+                      {label}
+                    </FilterChip>
+                  ))}
+                </FilterRow>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -294,8 +395,8 @@ export function Dashboard() {
         </Button>
       </div>
 
-      <div className="overflow-hidden clay-card">
-        <div className="hidden grid-cols-[1.5fr_.8fr_.7fr_.65fr_.75fr_1fr] gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))] md:grid">
+      <div>
+        <div className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,.7fr)_minmax(0,.55fr)_minmax(0,.85fr)_minmax(0,.85fr)_minmax(0,.85fr)] gap-3 border-b border-[hsl(var(--border))] px-5 pb-3.5 text-sm font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))] md:grid">
           <span>Patient</span>
           <span>Arrival</span>
           <span>Wait</span>
@@ -306,8 +407,8 @@ export function Dashboard() {
         {loading ? (
           <div className="space-y-0" aria-busy="true" aria-label="Loading queue">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3 border-b border-[hsl(var(--border))] px-4 py-4 last:border-0">
-                <span className="h-8 w-8 animate-pulse rounded-full bg-[hsl(var(--secondary))]" />
+              <div key={index} className="flex items-center gap-3 border-b border-[hsl(var(--border))] px-5 py-6 last:border-b-0">
+                <span className="h-5 w-8 animate-pulse rounded-full bg-[hsl(var(--secondary))]" />
                 <span className="h-4 w-1/3 animate-pulse rounded-full bg-[hsl(var(--secondary))]" />
                 <span className="ml-auto h-4 w-16 animate-pulse rounded-full bg-[hsl(var(--secondary))]" />
               </div>
@@ -326,56 +427,52 @@ export function Dashboard() {
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  whileHover={{ scale: 1.004 }}
                   transition={{ duration: 0.22 }}
                   key={patient.id}
                   onClick={() => setSelectedId(patient.id)}
                   data-testid={`row-patient-${patient.id}`}
                   aria-label={`Open details for ${patient.name}, queue position ${index + 1}`}
-                  className={`grid w-full gap-3 border-b border-[hsl(var(--border))] px-4 py-4 text-left transition last:border-0 hover:bg-[hsl(var(--secondary)/.38)] focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[hsl(var(--primary))] md:grid-cols-[1.5fr_.8fr_.7fr_.65fr_.75fr_1fr] md:items-center ${
+                  className={`grid w-full gap-3 border-b border-l-4 border-[hsl(var(--border))] border-l-transparent px-5 py-5 text-left transition-[background-color,box-shadow] duration-200 last:border-b-0 hover:bg-[hsl(var(--card))] hover:shadow-[0_6px_16px_-10px_hsl(211_48%_16%/.22)] focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[hsl(var(--primary))] md:grid-cols-[minmax(0,1.6fr)_minmax(0,.7fr)_minmax(0,.55fr)_minmax(0,.85fr)_minmax(0,.85fr)_minmax(0,.85fr)] md:items-center [&>*]:min-w-0 ${
                     patient.newlyArrived
-                      ? 'border-l-4 border-l-[hsl(var(--primary))]'
+                      ? 'border-l-[hsl(var(--primary))]'
                       : patient.deteriorating
-                        ? 'border-l-4 border-l-[hsl(var(--destructive))]'
+                        ? 'border-l-[hsl(var(--destructive))]'
                         : ''
                   } ${isGuidedFocus ? 'bg-[hsl(var(--primary)/.08)] ring-2 ring-inset ring-[hsl(var(--primary))]' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="mono w-6 shrink-0 text-xs text-[hsl(var(--muted-foreground))]">{String(index + 1).padStart(2, '0')}</span>
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[hsl(var(--primary)/.1)] text-[10px] font-bold text-[hsl(var(--primary))]">
-                      {patient.initials}
-                    </span>
+                    <span className="mono w-9 shrink-0 text-base text-[hsl(var(--muted-foreground))]">{String(index + 1).padStart(2, '0')}</span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-bold">{patient.name}</span>
-                        {patient.age !== null && <span className="shrink-0 text-[10px] text-[hsl(var(--muted-foreground))]">{patient.age}y</span>}
-                        {patient.newlyArrived && <span className="text-[9px] font-bold uppercase text-[hsl(var(--primary))]">new</span>}
+                        <span className="truncate text-lg font-bold">{patient.name}</span>
+                        {patient.age !== null && <span className="shrink-0 text-sm text-[hsl(var(--muted-foreground))]">{patient.age}y</span>}
+                        {patient.newlyArrived && <span className="text-[10px] font-bold uppercase text-[hsl(var(--primary))]">new</span>}
                       </div>
-                      <span className="block truncate text-xs text-[hsl(var(--muted-foreground))]">{patient.complaint}</span>
-                      <span className="mono block text-[9px] text-[hsl(var(--muted-foreground))]">
+                      <span className="block truncate text-base text-[hsl(var(--muted-foreground))]">{patient.complaint}</span>
+                      <span className="mono block truncate text-xs text-[hsl(var(--muted-foreground))]">
                         {patient.id} · HR {patient.heartRate ?? '—'} · SpO₂ {patient.oxygenSaturation ?? '—'}%
                       </span>
                     </div>
                   </div>
-                  <div className="hidden text-xs text-[hsl(var(--muted-foreground))] md:block">
+                  <div className="hidden text-base text-[hsl(var(--muted-foreground))] md:block">
                     {patient.arrivalMethod}
                     <br />
-                    <span className="mono text-[10px]">{patient.arrivalTime}</span>
+                    <span className="mono text-sm">{patient.arrivalTime}</span>
                   </div>
-                  <div className="text-xs md:text-sm">
+                  <div className="text-base md:text-lg">
                     <span className="mono font-bold">{patient.waitMinutes}m</span>
-                    {patient.deteriorating && <span className="ml-2 text-[10px] font-bold text-[hsl(var(--destructive))]">rising</span>}
+                    {patient.deteriorating && <span className="ml-2 text-sm font-bold text-[hsl(var(--destructive))]">rising</span>}
                   </div>
                   <div>
-                    <span className="mono text-sm font-bold text-[hsl(var(--primary))]">{patient.fusionScore}</span>
-                    <span className="ml-1 text-[10px] text-[hsl(var(--muted-foreground))]">/100 · {patient.aiConfidence}% conf</span>
+                    <span className="mono text-lg font-bold text-[hsl(var(--primary))]">{patient.fusionScore}</span>
+                    <span className="ml-1 text-sm text-[hsl(var(--muted-foreground))]">/100 · {patient.aiConfidence}% conf</span>
                   </div>
                   <div>
                     <LevelBadge level={effectiveLevel(patient)} />
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`text-[10px] font-bold uppercase ${
+                      className={`truncate text-sm font-bold uppercase ${
                         patient.reviewStatus === 'Needs clinician review' || patient.deteriorating
                           ? 'text-[hsl(var(--destructive))]'
                           : 'text-[hsl(var(--muted-foreground))]'
